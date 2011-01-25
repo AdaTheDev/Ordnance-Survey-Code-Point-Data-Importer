@@ -1,0 +1,10 @@
+This project uses the GeoCoordConversion library to convert the Eastings & Northings to Lon/Lat
+coordinates in the WGS84 system. The DLL was pulled from: http://code.google.com/p/geocoordconversion/
+as released by The Digital Property Group and is available under the GNU General Public License v3: 
+http://www.gnu.org/licenses/gpl.html.
+
+The above project in turn uses methods with maths adapted from Chris Vernes JavaScript (LGPL license) found at: 
+http://www.movable-type.co.uk/scripts/latlong-gridref.html 
+http://www.movable-type.co.uk/scripts/latlong-convert-coords.html
+
+
