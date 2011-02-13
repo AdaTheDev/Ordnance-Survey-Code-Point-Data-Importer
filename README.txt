@@ -9,5 +9,15 @@ dbo.PostCodeData table in MyDatabase on server SQLServerA, run the following fro
 
 OSCodePointDataImport.exe CODEPOINT SQLServerA MyDatabase dbo PostCodeData "C:\OS Code-Point Data"
 
+The resulting database table will consist of the following columns:
+OutwardCode VARCHAR(4) [first part of post code]
+InwardCode VARCHAR(3) [second part of post code]
+Longitude FLOAT
+Latitude FLOAT
+GeoLocation GEOGRAPHY
+
+It will also calculate a basic average location for each post code district (e.g. AB12) and sector (e.g. AB12 3)
+and create rows for those. For districts, the InwardCode will be an empty string.
+
 A quick background to this project is on my blog post:
 http://www.adathedev.co.uk/2011/01/gb-post-code-geographic-data-load-to.html
