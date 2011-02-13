@@ -21,10 +21,19 @@ using System.Text;
 namespace OSCodePointDataImport
 {
     /// <summary>
-    /// Parses / holds Command Line arguments.
+    /// Parses / holds Command Line arguments. Deals with the common set of required command line args.
+    /// Import-type-specific args are parsed by specific derived classes for that specific type.
+    /// e.g. currently, importing of Code-Point data is supported - CodePointArgParser is used to parse any Code-Point
+    /// specific arguments in addition to this base parsing functionality.
     /// </summary>
-    class CommandLineArgs
+    abstract class CommandLineArgs
     {
+        /// <summary>
+        /// What type of data want to import:
+        /// CODEPOINT
+        /// </summary>
+        public string DataType { get; set; }
+
         /// <summary>
         /// SQL Server name.
         /// </summary>
@@ -45,11 +54,7 @@ namespace OSCodePointDataImport
         /// </summary>
         public string TableName { get; set; }
 
-        /// <summary>
-        /// Directory containing the downloaded Ordnance Survey Code-Point CSV data files.
-        /// </summary>
-        public string DataFileDirectory { get; set; }
-
+       
         /// <summary>
         /// Parse the array of command line arguments.
         /// </summary>
@@ -60,34 +65,23 @@ namespace OSCodePointDataImport
         /// [3] = table name
         /// [4] = directory containing the Ordnance Survey Code-Point CSV data files
         /// </param>
-        public void Parse(string[] args)
+        public virtual void Parse(string[] args)
         {
-            for (int argNo = 0; argNo < args.Length; argNo++)
-            {
-                switch (argNo)
-                {
-                    case 0:
-                        ServerName = args[argNo];
-                        break;
-                    case 1:
-                        DBName = args[argNo];
-                        break;
-                    case 2:
-                        SchemaName = args[argNo];
-                        break;
-                    case 3:
-                        TableName = args[argNo];
-                        break;
-                    case 4:
-                        DataFileDirectory = args[argNo];
-                        break;
-                }
-            }
-            
+            int numOfArgs = args.Length;
+            if (numOfArgs >= 1) ServerName = args[1];
+            if (numOfArgs >= 2) DBName = args[2];
+            if (numOfArgs >= 3) SchemaName = args[3];
+            if (numOfArgs >= 4) TableName = args[4];                             
+        }
+
+        /// <summary>
+        /// Validate the command line arguments supplied.
+        /// </summary>
+        internal virtual void Validate()
+        {
             if (String.IsNullOrWhiteSpace(ServerName)) throw new ArgumentException("ServerName argument must be supplied");
             if (String.IsNullOrWhiteSpace(DBName)) throw new ArgumentException("DBName argument must be supplied");
-            if (String.IsNullOrWhiteSpace(TableName)) throw new ArgumentException("TableName argument must be supplied");
-            if (String.IsNullOrWhiteSpace(DataFileDirectory)) throw new ArgumentException("DataFileDirectory argument must be supplied");
+            if (String.IsNullOrWhiteSpace(TableName)) throw new ArgumentException("TableName argument must be supplied");         
         }
     }
 }

@@ -23,13 +23,14 @@ using System.Data;
 using TDPG.GeoCoordConversion;
 
 namespace OSCodePointDataImport
-{    
+{      
     /// <summary>
     /// Functionality to load Ordnance Survey Code-Point data files to SQL Server.
     /// The data files are available for download from: https://www.ordnancesurvey.co.uk/opendatadownload/products.html
     /// </summary>
-    class CodePointDataImporter
+    class CodePointDataImporter : OSDataImporter
     {
+
         /// <summary>
         /// Loads Code-Point CSV data files into a new table in SQL Server, converting the provided Eastings & Northings coordinates
         /// into WGS84 Lon/Lat coordinates.
@@ -64,6 +65,9 @@ namespace OSCodePointDataImport
                     LoadRowsToDatabase(connection, data, schemaName, tableName);
                     result = data.Rows.Count;
                 }
+                // Calculate and create rows for each postcode district (e.g. AB12) and sector (e.g. AB12 3), defining the Lon/Lat
+                // coordinates as the straight average of all the postcodes within that area.
+                CalculateDistrictsAndSectors(connection, schemaName, tableName);
                 // Now set the GeoLocation column (Geography type) based on the Latitude/Longitude
                 SetGeoDataAndFinaliseTable(connection, schemaName, tableName);
             }
@@ -89,7 +93,8 @@ namespace OSCodePointDataImport
                         BEGIN
                             CREATE TABLE [{0}].[{1}]
                             (
-                                PostCode VARCHAR(7) NOT NULL,
+                                OutwardCode VARCHAR(4) NOT NULL,
+                                InwardCode VARCHAR(3) NOT NULL,
                                 Longitude FLOAT,
                                 Latitude FLOAT,
                                 GeoLocation GEOGRAPHY
@@ -122,17 +127,22 @@ namespace OSCodePointDataImport
         {
             DataTable data = new DataTable();
             
-            data.Columns.Add("PostCode", typeof(string));
+            data.Columns.Add("OutwardCode", typeof(string));
+            data.Columns.Add("InwardCode", typeof(string));
             data.Columns.Add("Longitude", typeof(double));
             data.Columns.Add("Latitude", typeof(double));
             long easting, northing;
 
-            Console.WriteLine("Loading postcode data from files into memory...");
+            Console.WriteLine("Loading postcode data from files into memory...");      
+            string postCode;
+            string outwardCode;
+            string inwardCode;
+            DataRow row;
+            PolarGeoCoordinate polarCoord;
 
             foreach (string fileName in Directory.GetFiles(directory, "*.csv"))
             {
-                string[] lineData;
-                DataRow row;
+                string[] lineData;                
                 using (StreamReader stream = new StreamReader(fileName))
                 {
                     while (stream.Peek() >= 0)
@@ -141,15 +151,22 @@ namespace OSCodePointDataImport
                         easting = long.Parse(lineData[10]); // 11th column is Eastings
                         northing = long.Parse(lineData[11]); // 12th column is Northings
 
-                        // Use GeoCoordConversion DLL to convert the Eastings & Northings to Lon/Lat
-                        // coordinates in the WGS84 system. The DLL was pulled from: http://code.google.com/p/geocoordconversion/
-                        // and is available under the GNU General Public License v3: http://www.gnu.org/licenses/gpl.html
-                        GridReference gridRef = new GridReference(easting, northing);
-                        PolarGeoCoordinate polarCoord = GridReference.ChangeToPolarGeo(gridRef);
-                        polarCoord = PolarGeoCoordinate.ChangeCoordinateSystem(polarCoord, CoordinateSystems.WGS84);                       
-
-                        row = data.NewRow();                            
-                        row["PostCode"] = lineData[0].Replace("\"", ""); // 1st column is the PostCode and is contained within double quotes (remove them)
+                        polarCoord = ConvertToLonLat(northing, easting);                   
+                        row = data.NewRow();
+                        postCode = lineData[0].Replace("\"", ""); // 1st column is the PostCode and is contained within double quotes (remove them).
+                        if (postCode.Contains(' '))
+                        {
+                            outwardCode = postCode.Substring(0, postCode.IndexOf(' '));
+                            inwardCode = postCode.Substring(postCode.LastIndexOf(' ') + 1);
+                        }
+                        else
+                        {
+                            outwardCode = postCode.Substring(0, 4);
+                            inwardCode = postCode.Substring(4, 3);
+                        }
+                        
+                        row["OutwardCode"] = outwardCode;
+                        row["InwardCode"] = inwardCode;
                         row["Longitude"] = polarCoord.Lon;
                         row["Latitude"] = polarCoord.Lat;
                         data.Rows.Add(row);
@@ -160,7 +177,7 @@ namespace OSCodePointDataImport
             Console.WriteLine("Done! {0} rows of data prepared", data.Rows.Count.ToString());
             return data;
         }
-
+    
         /// <summary>
         /// Loads the supplied data to the newly created table in the database.
         /// </summary>
@@ -176,13 +193,47 @@ namespace OSCodePointDataImport
             {
                 bulkCopy.BulkCopyTimeout = 60;
                 bulkCopy.DestinationTableName = String.Format("[{0}].[{1}]", schemaName, tableName);
-                bulkCopy.ColumnMappings.Add("PostCode", "PostCode");
+                bulkCopy.ColumnMappings.Add("OutwardCode", "OutwardCode");
+                bulkCopy.ColumnMappings.Add("InwardCode", "InwardCode");
                 bulkCopy.ColumnMappings.Add("Longitude", "Longitude");
                 bulkCopy.ColumnMappings.Add("Latitude", "Latitude");
                 bulkCopy.WriteToServer(data);
             }
 
             Console.WriteLine("Done!");
+        }
+
+        /// <summary>
+        /// Calculates a simple average Lon/Lat for each postcode district (e.g. AB12) and sector (e.g. AB12 3),
+        /// and creates a row in the db table for each one.
+        /// </summary>
+        /// <param name="connection">SQL Server database connection</param>
+        /// <param name="schemaName">name of schema the table belongs to</param>
+        /// <param name="tableName">table to load the Post Code data to</param>
+        private void CalculateDistrictsAndSectors(SqlConnection connection, string schemaName, string tableName)
+        {
+            using (SqlCommand cmd = new SqlCommand())
+            {
+                cmd.Connection = connection;
+                cmd.CommandTimeout = 600;
+                Console.WriteLine("Calculating averages for postcode districts and sectors...");
+                cmd.CommandText = String.Format(@";WITH CTEDistrictsAndSectors AS
+                    (
+	                    SELECT OutwardCode, '' AS InwardCode, AVG(Longitude) AS AvgLongitude, AVG(Latitude) AS AvgLatitude
+	                    FROM [{0}].[{1}]
+	                    GROUP BY OutwardCode
+	                    UNION ALL
+	                    SELECT OutwardCode, LEFT(InwardCode, 1), AVG(Longitude), AVG(Latitude)
+	                    FROM [{0}].[{1}]
+	                    GROUP BY OutwardCode, LEFT(InwardCode, 1)
+                    )
+                    INSERT [{0}].[{1}] (OutwardCode, InwardCode, Longitude, Latitude, GeoLocation)
+                    SELECT OutwardCode, InwardCode, AvgLongitude, AvgLatitude, geography::Point(AvgLatitude, AvgLongitude, 4326)
+                    FROM CTEDistrictsAndSectors", schemaName, tableName);
+                cmd.ExecuteNonQuery();
+                Console.WriteLine("Done!");
+            }
+
         }
 
         /// <summary>
@@ -206,7 +257,7 @@ namespace OSCodePointDataImport
                 Console.WriteLine("Done!");
                 
                 Console.WriteLine("Setting PRIMARY KEY on table...");
-                cmd.CommandText = String.Format("ALTER TABLE [{0}].[{1}] ADD CONSTRAINT [PK_{1}] PRIMARY KEY CLUSTERED ([PostCode]);",
+                cmd.CommandText = String.Format("ALTER TABLE [{0}].[{1}] ADD CONSTRAINT [PK_{1}] PRIMARY KEY CLUSTERED ([OutwardCode], [InwardCode]);",
                     schemaName, tableName);
                 cmd.ExecuteNonQuery();
                 Console.WriteLine("Done!");

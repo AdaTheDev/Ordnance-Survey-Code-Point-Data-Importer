@@ -11,7 +11,8 @@
     <RootNamespace>OSCodePointDataImport</RootNamespace>
     <AssemblyName>OSCodePointDataImport</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
-    <TargetFrameworkProfile>Client</TargetFrameworkProfile>
+    <TargetFrameworkProfile>
+    </TargetFrameworkProfile>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
@@ -46,8 +47,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CommandLineArgs.cs" />
+    <Compile Include="CodePointArgParser.cs" />
     <Compile Include="CodePointDataImporter.cs" />
+    <Compile Include="CommandLineArgs.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="OSDataImporter.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

@@ -27,21 +27,27 @@ namespace OSCodePointDataImport
     ///   and extract the files to a directory on your machine.
     /// </summary>
     /// <example>
-    /// OSCodePointDataImport.exe MySqlServerName MyDbName dbo PostCodeData "C:\OS Code-Point Data"
+    /// OSCodePointDataImport.exe CODEPOINT MySqlServerName MyDbName dbo PostCodeData "C:\OS Code-Point Data"
     /// </example>
     class Program
-    {
+    {        
         static void Main(string[] args)
         {
             try
             {
-                // Parse in the command line arguments
-                CommandLineArgs argParser = new CommandLineArgs();
-                argParser.Parse(args);
+                if (args == null || args.Length == 0) throw new Exception("No arguments were provided");
 
-                // Import the data!
-                CodePointDataImporter importer = new CodePointDataImporter();
-                importer.LoadData(argParser.ServerName, argParser.DBName, argParser.SchemaName, argParser.TableName, argParser.DataFileDirectory);
+
+                // Currently, just for importing Code-Point data files. In future, could import other Ordnance Survey 
+                // data sets such as Boundary Data dependent on command line params.
+                switch (args[0].ToUpperInvariant())
+                {
+                    case "CODEPOINT":
+                        RunCodePointDataImport(args);
+                        break;                
+                    default:
+                        throw new Exception("Invalid first argument: import type must be CODEPOINT");
+                }                       
 
                 Console.WriteLine("The import process is complete. Press any key to exit.");
                 Console.ReadKey();
@@ -51,9 +57,21 @@ namespace OSCodePointDataImport
                 Console.Error.WriteLine(ex.Message.ToString());
                 Console.WriteLine("Press any key to exit");
                 Console.ReadKey();
-            }
-
-            
+            }            
         }
+
+        /// <summary>
+        /// Import Code-Point data.
+        /// </summary>
+        /// <param name="args">command line args</param>
+        static void RunCodePointDataImport(string[] args)
+        {
+            // This deals with parsing out the command line args specifically for Code-Point data importer.
+            CodePointArgParser argParser = new CodePointArgParser();
+            argParser.Parse(args);
+
+            CodePointDataImporter importer = new CodePointDataImporter();
+            importer.LoadData(argParser.ServerName, argParser.DBName, argParser.SchemaName, argParser.TableName, argParser.DataFileDirectory);
+        }       
     }
 }
