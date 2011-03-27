@@ -26,7 +26,7 @@ namespace OSCodePointDataImport
     /// e.g. currently, importing of Code-Point data is supported - CodePointArgParser is used to parse any Code-Point
     /// specific arguments in addition to this base parsing functionality.
     /// </summary>
-    abstract class CommandLineArgs
+    abstract class CommandLineArgParser<T> where T: Options,new()
     {
         /// <summary>
         /// What type of data want to import:
@@ -54,7 +54,9 @@ namespace OSCodePointDataImport
         /// </summary>
         public string TableName { get; set; }
 
-       
+        protected T _options = new T();
+        public T ImportOptions { get { return _options;} }
+
         /// <summary>
         /// Parse the array of command line arguments.
         /// </summary>
@@ -68,10 +70,10 @@ namespace OSCodePointDataImport
         public virtual void Parse(string[] args)
         {
             int numOfArgs = args.Length;
-            if (numOfArgs >= 1) ServerName = args[1];
-            if (numOfArgs >= 2) DBName = args[2];
-            if (numOfArgs >= 3) SchemaName = args[3];
-            if (numOfArgs >= 4) TableName = args[4];                             
+            if (numOfArgs >= 1) ImportOptions.ServerName = args[1];
+            if (numOfArgs >= 2) ImportOptions.DBName = args[2];
+            if (numOfArgs >= 3) ImportOptions.SchemaName = args[3];
+            if (numOfArgs >= 4) ImportOptions.TableName = args[4];
         }
 
         /// <summary>

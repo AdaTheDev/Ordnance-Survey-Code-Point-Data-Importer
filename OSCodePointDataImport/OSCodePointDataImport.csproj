@@ -47,14 +47,32 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CodePointArgParser.cs" />
-    <Compile Include="CodePointDataImporter.cs" />
-    <Compile Include="CommandLineArgs.cs">
+    <Compile Include="ArgumentParsers\CodePointArgParser.cs" />
+    <Compile Include="ArgumentParsers\IArgParser.cs" />
+    <Compile Include="ImportFactory.cs" />
+    <Compile Include="Importers\CodePointDataImporter.cs" />
+    <Compile Include="ArgumentParsers\CommandLineArgParser.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="OSDataImporter.cs" />
+    <Compile Include="Options\CodePointOptions.cs" />
+    <Compile Include="Options\Options.cs" />
+    <Compile Include="Options\ScaleGazetteerOptions.cs" />
+    <Compile Include="Importers\OSDataImporter.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ArgumentParsers\ScaleGazetteerArgParser.cs" />
+    <Compile Include="Importers\ScaleGazetteerDataImporter.cs" />
+    <Compile Include="Resources\FeatureCodes.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>FeatureCodes.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\FeatureCodes.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>FeatureCodes.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

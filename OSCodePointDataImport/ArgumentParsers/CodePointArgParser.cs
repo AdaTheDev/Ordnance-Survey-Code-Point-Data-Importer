@@ -5,8 +5,8 @@ using System.Text;
 
 namespace OSCodePointDataImport
 {
-    class CodePointArgParser : CommandLineArgs
-    {
+    class CodePointArgParser : CommandLineArgParser<CodePointOptions>
+    {               
         /// <summary>
         /// Directory containing the downloaded Ordnance Survey Code-Point CSV data files.
         /// </summary>
@@ -20,7 +20,7 @@ namespace OSCodePointDataImport
         public override void Parse(string[] args)
         {
             base.Parse(args);
-            if (args.Length >= 5) DataFileDirectory = args[5];
+            if (args.Length >= 6) ImportOptions.DataFileDirectory = args[5];
         }
 
         /// <summary>

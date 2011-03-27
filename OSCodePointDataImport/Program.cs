@@ -23,11 +23,12 @@ namespace OSCodePointDataImport
     /// <summary>
     /// Console app.
     /// Prerequisites:
-    /// - download the Code-Point data from: https://www.ordnancesurvey.co.uk/opendatadownload/products.html
+    /// - download the Code-Point / 1:50000 Scale Gazetteer data from: https://www.ordnancesurvey.co.uk/opendatadownload/products.html
     ///   and extract the files to a directory on your machine.
     /// </summary>
     /// <example>
     /// OSCodePointDataImport.exe CODEPOINT MySqlServerName MyDbName dbo PostCodeData "C:\OS Code-Point Data"
+    /// OSCodePointDataImport.exe GAZETTEER SQLServerA MyDatabase dbo Gazetteer County Feature "C:\OSGazetteerData\50kgaz2010.txt"
     /// </example>
     class Program
     {        
@@ -37,18 +38,19 @@ namespace OSCodePointDataImport
             {
                 if (args == null || args.Length == 0) throw new Exception("No arguments were provided");
 
-
-                // Currently, just for importing Code-Point data files. In future, could import other Ordnance Survey 
-                // data sets such as Boundary Data dependent on command line params.
-                switch (args[0].ToUpperInvariant())
+                string importType = args[0];
+                switch (importType.ToUpperInvariant())
                 {
                     case "CODEPOINT":
                         RunCodePointDataImport(args);
-                        break;                
+                        break;
+                    case "GAZETTEER":
+                        RunGazetteerDataImport(args);
+                        break;
                     default:
-                        throw new Exception("Invalid first argument: import type must be CODEPOINT");
-                }                       
-
+                        throw new Exception("Invalid first argument. Expected: CODEPOINT, GAZZETTEER");
+                }                             
+                
                 Console.WriteLine("The import process is complete. Press any key to exit.");
                 Console.ReadKey();
             }
@@ -58,6 +60,19 @@ namespace OSCodePointDataImport
                 Console.WriteLine("Press any key to exit");
                 Console.ReadKey();
             }            
+        }
+     
+        /// <summary>
+        /// Import 1:50000 Scale Gazetteer data.
+        /// </summary>
+        /// <param name="args">command line args</param>
+        static void RunGazetteerDataImport(string[] args)
+        {
+            ScaleGazetteerArgParser argParser = new ScaleGazetteerArgParser();
+            argParser.Parse(args);
+
+            ScaleGazetteerDataImporter importer = new ScaleGazetteerDataImporter();
+            importer.LoadData(argParser.ImportOptions);
         }
 
         /// <summary>
@@ -71,7 +86,7 @@ namespace OSCodePointDataImport
             argParser.Parse(args);
 
             CodePointDataImporter importer = new CodePointDataImporter();
-            importer.LoadData(argParser.ServerName, argParser.DBName, argParser.SchemaName, argParser.TableName, argParser.DataFileDirectory);
+            importer.LoadData(argParser.ImportOptions);
         }       
     }
 }

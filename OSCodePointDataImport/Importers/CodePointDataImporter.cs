@@ -62,17 +62,23 @@ namespace OSCodePointDataImport
                 using (DataTable data = ReadDataFromFiles(dataFileDirectory))
                 {
                     // Now load the data to the DB
-                    LoadRowsToDatabase(connection, data, schemaName, tableName);
-                    result = data.Rows.Count;
+                    result = LoadRowsToDatabase(connection, data, schemaName, tableName);
                 }
                 // Calculate and create rows for each postcode district (e.g. AB12) and sector (e.g. AB12 3), defining the Lon/Lat
                 // coordinates as the straight average of all the postcodes within that area.
                 CalculateDistrictsAndSectors(connection, schemaName, tableName);
                 // Now set the GeoLocation column (Geography type) based on the Latitude/Longitude
-                SetGeoDataAndFinaliseTable(connection, schemaName, tableName);
+                SetGeoColumn(connection, schemaName, tableName);
+                // Set PK on table
+                SetPrimaryKey(connection, schemaName, tableName, new string[] { "OutwardCode", "InwardCode" });
             }
             
             return result;
+        }
+
+        public int LoadData(CodePointOptions options)
+        {
+            return LoadData(options.ServerName, options.DBName, options.SchemaName, options.TableName, options.DataFileDirectory);
         }
 
         /// <summary>
@@ -176,32 +182,7 @@ namespace OSCodePointDataImport
 
             Console.WriteLine("Done! {0} rows of data prepared", data.Rows.Count.ToString());
             return data;
-        }
-    
-        /// <summary>
-        /// Loads the supplied data to the newly created table in the database.
-        /// </summary>
-        /// <param name="connection">SQL Server database connection</param>
-        /// <param name="data">DataTable containing the Post Codes with their Lon/Lat coordinates</param>
-        /// <param name="schemaName">name of schema the table belongs to</param>
-        /// <param name="tableName">table to load the Post Code data to</param>
-        private void LoadRowsToDatabase(SqlConnection connection, DataTable data, string schemaName, string tableName)
-        {
-            Console.WriteLine("Bulk loading the data into {0}.{1}...", schemaName, tableName);
-
-            using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.TableLock, null))
-            {
-                bulkCopy.BulkCopyTimeout = 60;
-                bulkCopy.DestinationTableName = String.Format("[{0}].[{1}]", schemaName, tableName);
-                bulkCopy.ColumnMappings.Add("OutwardCode", "OutwardCode");
-                bulkCopy.ColumnMappings.Add("InwardCode", "InwardCode");
-                bulkCopy.ColumnMappings.Add("Longitude", "Longitude");
-                bulkCopy.ColumnMappings.Add("Latitude", "Latitude");
-                bulkCopy.WriteToServer(data);
-            }
-
-            Console.WriteLine("Done!");
-        }
+        }           
 
         /// <summary>
         /// Calculates a simple average Lon/Lat for each postcode district (e.g. AB12) and sector (e.g. AB12 3),
@@ -234,34 +215,6 @@ namespace OSCodePointDataImport
                 Console.WriteLine("Done!");
             }
 
-        }
-
-        /// <summary>
-        /// Updates the loaded table to set the GeoLocation column to a Point based on the loaded Latitude and Longitude data.
-        /// Then makes the PostCode column a clustered primary key.
-        /// </summary>
-        /// <param name="connection">SQL Server database connection</param>
-        /// <param name="schemaName">name of the schema the table is in</param>
-        /// <param name="tableName">name of the table containing the data</param>
-        private void SetGeoDataAndFinaliseTable(SqlConnection connection, string schemaName, string tableName)
-        {
-            using (SqlCommand cmd = new SqlCommand())
-            {
-                cmd.Connection = connection;
-                cmd.CommandTimeout = 600;
-                Console.WriteLine("Setting GeoLocation GEOGRAPHY column to point based on Latitude and Longitude...");
-                cmd.CommandText =
-                    String.Format(@"UPDATE [{0}].[{1}] SET GeoLocation = geography::Point([Latitude], [Longitude], 4326);",
-                        schemaName, tableName);
-                cmd.ExecuteNonQuery();
-                Console.WriteLine("Done!");
-                
-                Console.WriteLine("Setting PRIMARY KEY on table...");
-                cmd.CommandText = String.Format("ALTER TABLE [{0}].[{1}] ADD CONSTRAINT [PK_{1}] PRIMARY KEY CLUSTERED ([OutwardCode], [InwardCode]);",
-                    schemaName, tableName);
-                cmd.ExecuteNonQuery();
-                Console.WriteLine("Done!");
-            }
-        }
+        }        
     }
 }
