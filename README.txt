@@ -8,10 +8,10 @@ Example usage:
 ------------------
 CODEPOINT data
 ------------------
-To load code point data that has been downloaded and extracted to C:\OSCodePointData, into
-dbo.PostCodeData table in MyDatabase on server SQLServerA, run the following from the command prompt:
+To load code point data that has been downloaded and extracted to C:\OSCodePointData (with data file in "Data" subfolder and supporting docs in "doc" subfolder), 
+into dbo.PostCodeData table in MyDatabase on server SQLServerA, run the following from the command prompt:
 
-OSCodePointDataImport.exe CODEPOINT SQLServerA MyDatabase dbo PostCodeData "C:\OS Code-Point Data"
+OSCodePointDataImport.exe CODEPOINT SQLServerA MyDatabase dbo PostCodeData "C:\OS Code-Point Data\Data" "c:\OS Code-Point Data\doc\Code-Point_Open_column_headers.csv"
 
 The resulting database table will consist of the following columns:
 OutwardCode VARCHAR(4) [first part of post code]
