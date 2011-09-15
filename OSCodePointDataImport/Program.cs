@@ -27,7 +27,7 @@ namespace OSCodePointDataImport
     ///   and extract the files to a directory on your machine.
     /// </summary>
     /// <example>
-    /// OSCodePointDataImport.exe CODEPOINT MySqlServerName MyDbName dbo PostCodeData "C:\OS Code-Point Data"
+    /// OSCodePointDataImport.exe CODEPOINT MySqlServerName MyDbName dbo PostCodeData "C:\OS Code-Point Data" "C:\OS Code-Point Data\Doc\Code-Point_Open_column_headers.csv"
     /// OSCodePointDataImport.exe GAZETTEER SQLServerA MyDatabase dbo Gazetteer County Feature "C:\OSGazetteerData\50kgaz2010.txt"
     /// </example>
     class Program

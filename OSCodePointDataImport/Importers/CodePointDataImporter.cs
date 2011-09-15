@@ -30,6 +30,9 @@ namespace OSCodePointDataImport
     /// </summary>
     class CodePointDataImporter : OSDataImporter
     {
+        private const string PostCodeColumnCode = "PC";
+        private const string EastingColumnCode = "EA";
+        private const string NorthingColumnCode = "NO";
 
         /// <summary>
         /// Loads Code-Point CSV data files into a new table in SQL Server, converting the provided Eastings & Northings coordinates
@@ -41,8 +44,10 @@ namespace OSCodePointDataImport
         /// <param name="tableName">table name to create and load the data into. The table must not already exist. If it does already
         /// exist, an exception will be thrown.</param>
         /// <param name="dataFileDirectory">directory where the Code-Point CSV data files are</param>
+        /// <param name="columnHeadersCsvFile">CSV file containing the column header definition for the Code-Point CSV data files.
+        /// Should be in ..\Doc\Code-Point_Open_column_headers.csv</param>
         /// <returns>number of rows loaded</returns>
-        public int LoadData(string serverName, string databaseName, string schemaName, string tableName, string dataFileDirectory)
+        public int LoadData(string serverName, string databaseName, string schemaName, string tableName, string dataFileDirectory, string columnHeadersCsvFile)
         {
             // Basic validation
             if (String.IsNullOrWhiteSpace(serverName)) throw new ArgumentException("ServerName must be supplied", "serverName");
@@ -51,15 +56,22 @@ namespace OSCodePointDataImport
             if (String.IsNullOrWhiteSpace(tableName)) throw new ArgumentException("TableName must be supplied", "tableName");
             if (String.IsNullOrWhiteSpace(dataFileDirectory)) throw new ArgumentException("DataFileDirectory must be supplied", "dataFileDirectory");
             if (!Directory.Exists(dataFileDirectory)) throw new DirectoryNotFoundException("DataFileDirectory does not exist");
+            if (String.IsNullOrWhiteSpace(columnHeadersCsvFile)) throw new ArgumentException("ColumnHeadersCsvFile must be supplied", "columnHeadersCsvFile");
+            if (!File.Exists(columnHeadersCsvFile)) throw new FileNotFoundException("ColumnHeadersCsvFile does not exist");
+
+            Dictionary<string, int> columns = ReadColumnHeaders(columnHeadersCsvFile);
+            if (!columns.ContainsKey(PostCodeColumnCode)) throw new Exception("Could not find PostCode column in ColumnHeadersCsvFile");
+            if (!columns.ContainsKey(EastingColumnCode)) throw new Exception("Could not find Easting column in ColumnHeadersCsvFile");
+            if (!columns.ContainsKey(NorthingColumnCode)) throw new Exception("Could not find Northing column in ColumnHeadersCsvFile");
 
             int result = 0;
             using (SqlConnection connection = new SqlConnection(String.Format("Data Source={0};Initial Catalog={1};Integrated Security=SSPI;", serverName, databaseName)))
             {
                 connection.Open();
                 // Create the table to import the data into. If it already exists, or the schema is not valid this will throw an exception.
-                PrepareTable(connection, schemaName, tableName);
+                PrepareTable(connection, schemaName, tableName);                
                 // Read all the data in from the data files into a single DataTable in memory
-                using (DataTable data = ReadDataFromFiles(dataFileDirectory))
+                using (DataTable data = ReadDataFromFiles(dataFileDirectory, columns))
                 {
                     // Now load the data to the DB
                     result = LoadRowsToDatabase(connection, data, schemaName, tableName);
@@ -76,9 +88,26 @@ namespace OSCodePointDataImport
             return result;
         }
 
+        /// <summary>
+        /// Looks in the CSV headers file supplied with the Code-Point data download, and extracts
+        /// all the columns defined with their index position.
+        /// </summary>
+        /// <param name="columnHeadersCsvFile">CSV file containing the column header listing</param>
+        /// <returns>dictionary of headers</returns>
+        private Dictionary<string, int> ReadColumnHeaders(string columnHeadersCsvFile)
+        {
+            using (StreamReader reader = new StreamReader(columnHeadersCsvFile))
+            {
+                string[] headers = reader.ReadLine().Split(',');
+                Dictionary<string, int> columnHeaders =
+                    headers.Select((header, index) => new { Header = header, Index = index }).ToDictionary(x => x.Header, x => x.Index);
+                return columnHeaders;                
+            }            
+        }
+
         public int LoadData(CodePointOptions options)
         {
-            return LoadData(options.ServerName, options.DBName, options.SchemaName, options.TableName, options.DataFileDirectory);
+            return LoadData(options.ServerName, options.DBName, options.SchemaName, options.TableName, options.DataFileDirectory, options.ColumnHeadersCsvFile);
         }
 
         /// <summary>
@@ -129,7 +158,7 @@ namespace OSCodePointDataImport
         /// </summary>
         /// <param name="directory">directory containing the Ordnance Survey Code-Point CSV data files</param>
         /// <returns>DataTable containing each Post Code with convert Lon/Lat coordinates</returns>
-        private DataTable ReadDataFromFiles(string directory)
+        private DataTable ReadDataFromFiles(string directory, Dictionary<string, int> columns)
         {
             DataTable data = new DataTable();
             
@@ -146,6 +175,10 @@ namespace OSCodePointDataImport
             DataRow row;
             PolarGeoCoordinate polarCoord;
 
+            int eastingColumnIndex = columns[EastingColumnCode];
+            int northingColumnIndex = columns[NorthingColumnCode];
+            int postCodeColumnIndex = columns[PostCodeColumnCode];
+
             foreach (string fileName in Directory.GetFiles(directory, "*.csv"))
             {
                 string[] lineData;                
@@ -154,12 +187,12 @@ namespace OSCodePointDataImport
                     while (stream.Peek() >= 0)
                     {                       
                         lineData = stream.ReadLine().Split(',');
-                        easting = long.Parse(lineData[10]); // 11th column is Eastings
-                        northing = long.Parse(lineData[11]); // 12th column is Northings
+                        easting = long.Parse(lineData[eastingColumnIndex]);
+                        northing = long.Parse(lineData[northingColumnIndex]);
 
                         polarCoord = ConvertToLonLat(northing, easting);                   
                         row = data.NewRow();
-                        postCode = lineData[0].Replace("\"", ""); // 1st column is the PostCode and is contained within double quotes (remove them).
+                        postCode = lineData[postCodeColumnIndex].Replace("\"", ""); // 1st column is the PostCode and is contained within double quotes (remove them).
                         if (postCode.Contains(' '))
                         {
                             outwardCode = postCode.Substring(0, postCode.IndexOf(' '));

@@ -21,6 +21,7 @@ namespace OSCodePointDataImport
         {
             base.Parse(args);
             if (args.Length >= 6) ImportOptions.DataFileDirectory = args[5];
+            if (args.Length >= 7) ImportOptions.ColumnHeadersCsvFile = args[6];
         }
 
         /// <summary>
@@ -30,6 +31,7 @@ namespace OSCodePointDataImport
         {
             base.Validate();
             if (String.IsNullOrWhiteSpace(DataFileDirectory)) throw new ArgumentException("DataFileDirectory argument must be supplied");
+            
         }        
     }
 }
