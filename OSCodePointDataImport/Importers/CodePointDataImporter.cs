@@ -83,6 +83,8 @@ namespace OSCodePointDataImport
                 SetGeoColumn(connection, schemaName, tableName);
                 // Set PK on table
                 SetPrimaryKey(connection, schemaName, tableName, new string[] { "OutwardCode", "InwardCode" });
+                // Create spatial index on GeoLocation column
+                CreateSpatialIndex(connection, schemaName, tableName);
             }
             
             return result;

@@ -117,5 +117,18 @@ namespace OSCodePointDataImport
             ExecCommand(connection, String.Format("ALTER TABLE [{0}].[{1}] ADD CONSTRAINT [FK_{1}_{2}] FOREIGN KEY ([{3}]) REFERENCES {2}({4});",
                 schemaName, foreignKeyTableName, primaryKeyTableName, foreignKeyColumnName, primaryKeyColumnName));                
         }
+
+        /// <summary>
+        /// Creates a spatial index on the GeoLocation column.
+        /// </summary>
+        /// <param name="connection">db conneciton to run the command against</param>
+        /// <param name="schemaName">schema name</param>
+        /// <param name="tableName">table name</param>
+        protected void CreateSpatialIndex(SqlConnection connection, string schemaName, string tableName)
+        {
+            Console.WriteLine("Creating spatial index on GeoLocation column in table: {0}...", tableName);
+
+            ExecCommand(connection, String.Format("CREATE SPATIAL INDEX [IX_{0}_GeoLocation] ON [{1}].[{0}] ([GeoLocation]);", tableName, schemaName));
+        }
     }
 }

@@ -86,7 +86,8 @@ namespace OSCodePointDataImport
                 SetForeignKey(connection, schemaName, countyLookupTableName, "Code", tableName, "CountyCode");
                 // Set FK on point data table -> Feature lookup table
                 SetForeignKey(connection, schemaName, featureLookupTableName, "Code", tableName, "FeatureCode");
-
+                // Create spatial index on GeoLocation column
+                CreateSpatialIndex(connection, schemaName, tableName);
             }
 
             return result;
