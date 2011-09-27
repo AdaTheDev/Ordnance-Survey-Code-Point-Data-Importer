@@ -114,7 +114,7 @@ namespace OSCodePointDataImport
         {
             Console.WriteLine("Setting FOREIGN KEY from {0} to {1}...", foreignKeyTableName, primaryKeyTableName);
 
-            ExecCommand(connection, String.Format("ALTER TABLE [{0}].[{1}] ADD CONSTRAINT [FK_{1}_{2}] FOREIGN KEY ([{3}]) REFERENCES {2}({4});",
+            ExecCommand(connection, String.Format("ALTER TABLE [{0}].[{1}] ADD CONSTRAINT [FK_{1}_{2}] FOREIGN KEY ([{3}]) REFERENCES [{0}].{2}({4});",
                 schemaName, foreignKeyTableName, primaryKeyTableName, foreignKeyColumnName, primaryKeyColumnName));                
         }
 

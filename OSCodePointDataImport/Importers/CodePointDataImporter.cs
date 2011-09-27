@@ -102,7 +102,7 @@ namespace OSCodePointDataImport
             {
                 string[] headers = reader.ReadLine().Split(',');
                 Dictionary<string, int> columnHeaders =
-                    headers.Select((header, index) => new { Header = header, Index = index }).ToDictionary(x => x.Header, x => x.Index);
+                    headers.Where(x => { return !String.IsNullOrEmpty(x); }).Select((header, index) => new { Header = header, Index = index }).ToDictionary(x => x.Header, x => x.Index);
                 return columnHeaders;                
             }            
         }
