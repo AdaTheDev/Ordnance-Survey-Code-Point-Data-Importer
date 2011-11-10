@@ -132,7 +132,7 @@ namespace OSCodePointDataImport
             Dictionary<string, string> counties = new Dictionary<string, string>();
             string countyCode, countyName;
 
-            using (StreamReader stream = new StreamReader(dataFile))
+            using (StreamReader stream = new StreamReader(dataFile, Encoding.UTF7))
             {
                 while (stream.Peek() >= 0)
                 {
