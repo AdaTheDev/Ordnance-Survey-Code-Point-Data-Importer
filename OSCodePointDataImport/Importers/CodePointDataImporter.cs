@@ -33,6 +33,8 @@ namespace OSCodePointDataImport
         private const string PostCodeColumnCode = "PC";
         private const string EastingColumnCode = "EA";
         private const string NorthingColumnCode = "NO";
+        private const string PositionalQualityIndicatorColumnsCode = "PQ";
+        private const int PositionalQualityIndicatesNoCoordinates = 90;
 
         /// <summary>
         /// Loads Code-Point CSV data files into a new table in SQL Server, converting the provided Eastings & Northings coordinates
@@ -63,6 +65,7 @@ namespace OSCodePointDataImport
             if (!columns.ContainsKey(PostCodeColumnCode)) throw new Exception("Could not find PostCode column in ColumnHeadersCsvFile");
             if (!columns.ContainsKey(EastingColumnCode)) throw new Exception("Could not find Easting column in ColumnHeadersCsvFile");
             if (!columns.ContainsKey(NorthingColumnCode)) throw new Exception("Could not find Northing column in ColumnHeadersCsvFile");
+            if (!columns.ContainsKey(PositionalQualityIndicatorColumnsCode)) throw new Exception("Could not find Positional Quality Indicator column in ColumnHeadersCsvFile");
 
             int result = 0;
             using (SqlConnection connection = new SqlConnection(String.Format("Data Source={0};Initial Catalog={1};Integrated Security=SSPI;", serverName, databaseName)))
@@ -168,18 +171,23 @@ namespace OSCodePointDataImport
             data.Columns.Add("InwardCode", typeof(string));
             data.Columns.Add("Longitude", typeof(double));
             data.Columns.Add("Latitude", typeof(double));
+
             long easting, northing;
 
             Console.WriteLine("Loading postcode data from files into memory...");      
             string postCode;
             string outwardCode;
             string inwardCode;
+            int positionalQualityIndicator;
+
             DataRow row;
             PolarGeoCoordinate polarCoord;
 
             int eastingColumnIndex = columns[EastingColumnCode];
             int northingColumnIndex = columns[NorthingColumnCode];
             int postCodeColumnIndex = columns[PostCodeColumnCode];
+            int positionalQualityIndicatorColumnIndex = columns[PositionalQualityIndicatorColumnsCode];
+            int ignoredDueToNoCoordinates = 0;
 
             foreach (string fileName in Directory.GetFiles(directory, "*.csv"))
             {
@@ -189,12 +197,23 @@ namespace OSCodePointDataImport
                     while (stream.Peek() >= 0)
                     {                       
                         lineData = stream.ReadLine().Split(',');
+                        positionalQualityIndicator = int.Parse(lineData[positionalQualityIndicatorColumnIndex]);
+                        postCode = lineData[postCodeColumnIndex].Replace("\"", "");
+
+                        if (positionalQualityIndicator == PositionalQualityIndicatesNoCoordinates)
+                        {
+                            ignoredDueToNoCoordinates++;
+                            Console.WriteLine("Ignoring postcode due to no positional coordinates: " + postCode);
+                            continue;
+                        }
+                        
                         easting = long.Parse(lineData[eastingColumnIndex]);
                         northing = long.Parse(lineData[northingColumnIndex]);
 
-                        polarCoord = ConvertToLonLat(northing, easting);                   
+                        polarCoord = ConvertToLonLat(northing, easting);
                         row = data.NewRow();
-                        postCode = lineData[postCodeColumnIndex].Replace("\"", ""); // 1st column is the PostCode and is contained within double quotes (remove them).
+                            
+                            // 1st column is the PostCode and is contained within double quotes (remove them).
                         if (postCode.Contains(' '))
                         {
                             outwardCode = postCode.Substring(0, postCode.IndexOf(' '));
@@ -205,17 +224,17 @@ namespace OSCodePointDataImport
                             outwardCode = postCode.Substring(0, 4);
                             inwardCode = postCode.Substring(4, 3);
                         }
-                        
+
                         row["OutwardCode"] = outwardCode;
                         row["InwardCode"] = inwardCode;
                         row["Longitude"] = polarCoord.Lon;
                         row["Latitude"] = polarCoord.Lat;
-                        data.Rows.Add(row);
+                        data.Rows.Add(row);                        
                     }
                 }
             }
 
-            Console.WriteLine("Done! {0} rows of data prepared", data.Rows.Count.ToString());
+            Console.WriteLine("Done! {0} rows of data prepared ({1} postcodes ignored due to no coordinates)", data.Rows.Count.ToString(), ignoredDueToNoCoordinates.ToString());
             return data;
         }           
 
