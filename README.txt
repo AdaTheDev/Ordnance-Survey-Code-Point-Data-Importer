@@ -2,6 +2,17 @@ This project requires .NET 4.0.
 You will need to have downloaded and extracted the appropriate Ordnance Survey data file(s) to your machine prior 
 to running. They are available from: https://www.ordnancesurvey.co.uk/opendatadownload/products.html
 
+
+==========
+Background
+==========
+A quick background to this project is on my blog post:
+http://www.adathedev.co.uk/2011/01/gb-post-code-geographic-data-load-to.html
+
+See analysis of accuracy of the conversion process from Eastings/Northings to Latitude/Longitude:
+http://www.adathedev.co.uk/2012/03/ordnance-survey-data-importer.html
+
+
 ==============
 Example usage:
 ==============
@@ -48,9 +59,3 @@ Name VARCHAR(60)
 The Feature lookup table will consist of the following columns:
 Code VARCHAR(3) PRIMARY KEY
 Description VARCHAR(50)
-
-==========
-Background
-==========
-A quick background to this project is on my blog post:
-http://www.adathedev.co.uk/2011/01/gb-post-code-geographic-data-load-to.html
